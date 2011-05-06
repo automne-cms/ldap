@@ -6,14 +6,11 @@
 
 require_once(dirname(__FILE__).'/../../cms_rc_admin.php');
 
-//check if ASE is already installed (if so, it is an update)
-$sql = "show tables";
-$q = new CMS_query($sql);
+//check if module is already installed (if so, it is an update)
 $installed = false;
-while ($table = $q->getValue(0)) {
-	if ($table == 'profilesLdapUsers') {
-		$installed = true;
-	}
+$module = CMS_modulesCatalog::getByCodename('cms_ldap');
+if ($module) {
+	$installed = true;
 }
 if (!$installed) {
 	echo "Module LDAP installation : Not installed : Launch installation ...<br />";
