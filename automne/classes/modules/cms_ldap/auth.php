@@ -81,7 +81,7 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
 									}
 								}
 								if (!isset($this->_userDN)) {
-									$this->_messages[] = self::AUTH_INVALID_CREDENTIALS;
+									$this->_messages[] = CMS_auth::AUTH_INVALID_CREDENTIALS;
 									$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
 								}
 							break;
@@ -142,13 +142,13 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
 						$hm = $ldap->getEntry($acctname);
 						if ($hm) {
 							$this->_userDN = $acctname;
-							$this->_messages[] = self::AUTH_SSOLOGIN_VALID;
+							$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_VALID;
 							$this->_result = new Zend_Auth_Result(Zend_Auth_Result::SUCCESS, $ssoLogin, $this->_messages);
 							return $this->_result;
 						}
 					}
 					if (!isset($this->_userDN)) {
-						$this->_messages[] = self::AUTH_SSOLOGIN_INVALID_USER;
+						$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_INVALID_USER;
 						$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
 					}
 				} catch (Exception $e) {
@@ -162,6 +162,32 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
 			$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE_IDENTITY_NOT_FOUND, null, $this->_messages);
 		}
 		return $this->_result;
+    }
+    
+    /**
+	  * Get CMS_profile_user from his Id
+	  * 
+	  * @param mixed $userId the user id to get
+	  * @return CMS_profile_user, false otherwise
+	  * @access public
+	  */
+    function getUser($userId) {
+		if (io::isPositiveInteger($userId)) { //userId is a CMS_profile_user id
+			$user = CMS_profile_usersCatalog::getByID($userId);
+		} else { //userId is a CMS_profile_user id
+			$user = CMS_profile_usersCatalog::getByLogin($userId);
+		}
+		
+		//If user is founded and auth adapter can update user : update it
+		//ex : LDAP login and Automne user
+		if (isset($user) && $user) {
+			$user = $this->updateUser($user);
+		} else {
+			//If user is not founded but auth adapter can create user : try to create it
+			//ex : LDAP login but no Automne user
+			$user = $this->createUser();
+		}
+		return $user;
     }
 	
 	/**

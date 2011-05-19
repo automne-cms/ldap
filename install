@@ -57,8 +57,6 @@
 >	/automne/Zend/Ldap/Exception.php
 >	/automne/Zend/Ldap/Collection/Iterator/Default.php
 >	/automne/Zend/Ldap/Attribute.php
->	/automne/Zend/LICENSE.txt
->	/automne/Zend/VERSION
 >	/automne/admin/modules/cms_ldap/groups-controler.php
 >	/automne/admin/modules/cms_ldap/users-controler.php
 >	/automne/sql/messages/fr/cms_ldap.sql
