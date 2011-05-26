@@ -50,110 +50,132 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
      */
     public function authenticate()
     {
-		//Load LDAP options
-		$options = CMS_module_cms_ldap::getLdapConfig();
-		if ($options) {
-			$this->_ldapOptions = $options->ldap->toArray();
-			$this->_options = $options->automne->toArray();
-			//PARAMS DATAS
-			if (isset($this->_params['login']) && isset($this->_params['password']) && $this->_params['login'] && $this->_params['password']) {
-				//check token
-				if (isset($this->_params['tokenName']) && $this->_params['tokenName']
-					&& (!isset($this->_params['token']) || !$this->_params['token'] || !CMS_session::checkToken($this->_params['tokenName'], $this->_params['token']))) {
-					
-					$this->_messages[] = CMS_auth::AUTH_INVALID_TOKEN;
-					$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
-				} else {
-					try {
-						$adapter = new Zend_Auth_Adapter_Ldap(array($this->_ldapOptions), $this->_params['login'], $this->_params['password']);
-						$this->_result = $adapter->authenticate();
-						//if authentification success
-						switch ($this->_result->getCode()) {
-							case Zend_Auth_Result::SUCCESS:
-								$this->_messages[] = $this->_result->getMessages();
+		if (isset($this->_params['authType'])) {
+			switch ($this->_params['authType']) {
+				case 'credentials':
+					//Load LDAP options
+					$options = CMS_module_cms_ldap::getLdapConfig();
+					if ($options) {
+						$this->_ldapOptions = $options->ldap->toArray();
+						$this->_options = $options->automne->toArray();
+						//PARAMS DATAS
+						if (isset($this->_params['login']) && isset($this->_params['password']) && $this->_params['login'] && $this->_params['password']) {
+							//check token
+							if (isset($this->_params['tokenName']) && $this->_params['tokenName']
+								&& (!isset($this->_params['token']) || !$this->_params['token'] || !CMS_session::checkToken($this->_params['tokenName'], $this->_params['token']))) {
+								
+								$this->_messages[] = CMS_auth::AUTH_INVALID_TOKEN;
+								$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
+							} else {
+								try {
+									$adapter = new Zend_Auth_Adapter_Ldap(array($this->_ldapOptions), $this->_params['login'], $this->_params['password']);
+									$this->_result = $adapter->authenticate();
+									//if authentification success
+									switch ($this->_result->getCode()) {
+										case Zend_Auth_Result::SUCCESS:
+											$this->_messages[] = $this->_result->getMessages();
+											//get user infos according to options
+											$ldap = $adapter->getLdap();
+											$acctname = $ldap->getCanonicalAccountName($this->_result->getIdentity(), Zend_Ldap::ACCTNAME_FORM_DN);
+											if ($acctname) {
+												$hm = $ldap->getEntry($acctname);
+												if ($hm) {
+													$this->_userDN = $acctname;
+												}
+											}
+											if (!isset($this->_userDN)) {
+												$this->_messages[] = CMS_auth::AUTH_INVALID_CREDENTIALS;
+												$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
+											}
+										break;
+										case Zend_Auth_Result::FAILURE_IDENTITY_NOT_FOUND:
+									    	//Delete user if this user exist in DB and has an UID
+											if (isset($this->_options['deleteInvalidUser']) && $this->_options['deleteInvalidUser']) {
+												$ldap = $adapter->getLdap();
+												$ldapOptions = $ldap->getOptions();
+												$acctname = $ldap->getCanonicalAccountName($this->_params['login'], $ldapOptions['accountCanonicalForm']);
+												$invalidUser = CMS_ldap_userCatalog::getByLogin($acctname);
+												if ($invalidUser && $invalidUser->getDN()) {
+													$invalidUser->setDeleted(true);
+													$invalidUser->setActive(false);
+													$log = new CMS_log();
+													$log->logMiscAction(CMS_log::LOG_ACTION_PROFILE_USER_EDIT, $invalidUser, "Auto delete invalid LDAP user : ".$invalidUser->getFullName());
+													$invalidUser->writeToPersistence();
+													unset($invalidUser);
+													CMS_grandFather::log('delete user '.$acctname);
+												}
+											}
+										break;
+										case Zend_Auth_Result::FAILURE_CREDENTIAL_INVALID:
+									        //nothing for now
+										break;
+										case Zend_Auth_Result::FAILURE:
+										default:
+											CMS_grandFather::raiseError('LDAP Authentification return code '.$this->_result->getCode().' with messages '.print_r($this->_result->getMessages(), true));
+										break;
+									}
+								} catch (Exception $e) {
+									$this->raiseError($e->getMessage());
+								}
+							}
+						}
+					}
+				break;
+				case 'session':
+					//Not handled
+				break;
+				case 'cookie':
+					//Not handled
+				break;
+				case 'sso':
+					//Load LDAP options
+					$options = CMS_module_cms_ldap::getLdapConfig();
+					if ($options) {
+						$this->_ldapOptions = $options->ldap->toArray();
+						$this->_options = $options->automne->toArray();
+						
+						$ssoLogin = '';
+						if (defined('MOD_CMS_LDAP_SSO_LOGIN') && MOD_CMS_LDAP_SSO_LOGIN) {
+							$ssoLogin = MOD_CMS_LDAP_SSO_LOGIN;
+						} elseif (defined('MOD_CMS_LDAP_SSO_FUNCTION') && MOD_CMS_LDAP_SSO_FUNCTION) {
+							if (is_callable(MOD_CMS_LDAP_SSO_FUNCTION, false)) {//check if function/method name exists.
+								if (io::strpos(MOD_CMS_LDAP_SSO_FUNCTION, '::') !== false) {//static method call
+									$method = explode('::', MOD_CMS_LDAP_SSO_FUNCTION);
+									$ssoLogin = call_user_func(array($method[0], $method[1]));
+								} else { //function call
+									$ssoLogin = call_user_func(MOD_CMS_LDAP_SSO_FUNCTION);
+								}
+							} else {
+								$this->raiseError('Cannot call SSO method/function: '.MOD_CMS_LDAP_SSO_FUNCTION);
+							}
+						}
+						if ($ssoLogin) {
+							try {
 								//get user infos according to options
-								$ldap = $adapter->getLdap();
-								$acctname = $ldap->getCanonicalAccountName($this->_result->getIdentity(), Zend_Ldap::ACCTNAME_FORM_DN);
+								$ldap = new Zend_Ldap($this->_ldapOptions);
+								$acctname = $ldap->getCanonicalAccountName($ssoLogin, Zend_Ldap::ACCTNAME_FORM_DN);
 								if ($acctname) {
 									$hm = $ldap->getEntry($acctname);
 									if ($hm) {
 										$this->_userDN = $acctname;
+										$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_VALID;
+										$this->_result = new Zend_Auth_Result(Zend_Auth_Result::SUCCESS, $ssoLogin, $this->_messages);
+										return $this->_result;
 									}
 								}
 								if (!isset($this->_userDN)) {
-									$this->_messages[] = CMS_auth::AUTH_INVALID_CREDENTIALS;
+									$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_INVALID_USER;
 									$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
 								}
-							break;
-							case Zend_Auth_Result::FAILURE_IDENTITY_NOT_FOUND:
-						    	//Delete user if this user exist in DB and has an UID
-								if (isset($this->_options['deleteInvalidUser']) && $this->_options['deleteInvalidUser']) {
-									$ldap = $adapter->getLdap();
-									$ldapOptions = $ldap->getOptions();
-									$acctname = $ldap->getCanonicalAccountName($this->_params['login'], $ldapOptions['accountCanonicalForm']);
-									$invalidUser = CMS_ldap_userCatalog::getByLogin($acctname);
-									if ($invalidUser && $invalidUser->getDN()) {
-										$invalidUser->setDeleted(true);
-										$invalidUser->setActive(false);
-										$log = new CMS_log();
-										$log->logMiscAction(CMS_log::LOG_ACTION_PROFILE_USER_EDIT, $invalidUser, "Auto delete invalid LDAP user : ".$invalidUser->getFullName());
-										$invalidUser->writeToPersistence();
-										unset($invalidUser);
-										CMS_grandFather::log('delete user '.$acctname);
-									}
-								}
-							break;
-							case Zend_Auth_Result::FAILURE_CREDENTIAL_INVALID:
-						        //nothing for now
-							break;
-							case Zend_Auth_Result::FAILURE:
-							default:
-								CMS_grandFather::raiseError('LDAP Authentification return code '.$this->_result->getCode().' with messages '.print_r($this->_result->getMessages(), true));
-							break;
-						}
-					} catch (Exception $e) {
-						$this->raiseError($e->getMessage());
-					}
-				}
-			}
-			//SSO
-			//@TODO : check those SSO methods
-			$ssoLogin = '';
-			if (defined('MOD_CMS_LDAP_SSO_LOGIN') && MOD_CMS_LDAP_SSO_LOGIN) {
-				$ssoLogin = MOD_CMS_LDAP_SSO_LOGIN;
-			} elseif (defined('MOD_CMS_LDAP_SSO_FUNCTION') && MOD_CMS_LDAP_SSO_FUNCTION) {
-				if (is_callable(MOD_CMS_LDAP_SSO_FUNCTION, false)) {//check if function/method name exists.
-					if (io::strpos(MOD_CMS_LDAP_SSO_FUNCTION, '::') !== false) {//static method call
-						$method = explode('::', MOD_CMS_LDAP_SSO_FUNCTION);
-						$ssoLogin = call_user_func(array($method[0], $method[1]));
-					} else { //function call
-						$ssoLogin = call_user_func(MOD_CMS_LDAP_SSO_FUNCTION);
-					}
-				} else {
-					$this->raiseError('Cannot call SSO method/function: '.MOD_CMS_LDAP_SSO_FUNCTION);
-				}
-			}
-			if ($ssoLogin) {
-				try {
-					//get user infos according to options
-					$ldap = new Zend_Ldap($this->_ldapOptions);
-					$acctname = $ldap->getCanonicalAccountName($ssoLogin, Zend_Ldap::ACCTNAME_FORM_DN);
-					if ($acctname) {
-						$hm = $ldap->getEntry($acctname);
-						if ($hm) {
-							$this->_userDN = $acctname;
-							$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_VALID;
-							$this->_result = new Zend_Auth_Result(Zend_Auth_Result::SUCCESS, $ssoLogin, $this->_messages);
-							return $this->_result;
+							} catch (Exception $e) {
+								$this->raiseError($e->getMessage());
+							}
 						}
 					}
-					if (!isset($this->_userDN)) {
-						$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_INVALID_USER;
-						$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
-					}
-				} catch (Exception $e) {
-					$this->raiseError($e->getMessage());
-				}
+				break;
+				default:
+					CMS_grandFather::raiseError('Unknown authType: '.$this->_params['authType']);
+				break;
 			}
 		}
 		//No result founded
@@ -177,7 +199,6 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
 		} else { //userId is a CMS_profile_user id
 			$user = CMS_profile_usersCatalog::getByLogin($userId);
 		}
-		
 		//If user is founded and auth adapter can update user : update it
 		//ex : LDAP login and Automne user
 		if (isset($user) && $user) {
