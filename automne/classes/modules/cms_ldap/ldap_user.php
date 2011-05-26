@@ -133,12 +133,21 @@ class CMS_ldap_user extends CMS_profile_user
 			if ($hm) {
 				if (isset($atmOptions['account'])) {
 					foreach ($atmOptions['account'] as $key => $value) {
-						if ($value && isset($hm[$value][0])) {
-							if ($key == 'login') {
-								$ldapOptions = $ldap->getOptions();
-								$userInfos[$key] = $ldap->getCanonicalAccountName($hm[$value][0], $ldapOptions['accountCanonicalForm']);
-							} else {
-								$userInfos[$key] = $hm[$value][0];
+						if ($value) {
+							if (isset($hm[$value][0])) {
+								if ($key == 'login') {
+									$ldapOptions = $ldap->getOptions();
+									$userInfos[$key] = $ldap->getCanonicalAccountName($hm[$value][0], $ldapOptions['accountCanonicalForm']);
+								} else {
+									$userInfos[$key] = $hm[$value][0];
+								}
+							} elseif (isset($hm[strtolower($value)][0])) {
+								if ($key == 'login') {
+									$ldapOptions = $ldap->getOptions();
+									$userInfos[$key] = $ldap->getCanonicalAccountName($hm[strtolower($value)][0], $ldapOptions['accountCanonicalForm']);
+								} else {
+									$userInfos[$key] = $hm[strtolower($value)][0];
+								}
 							}
 						}
 					}
@@ -156,7 +165,10 @@ class CMS_ldap_user extends CMS_profile_user
 		if (isset($userInfos['login']) && !CMS_profile_usersCatalog::loginExists($userInfos['login'], $this)) {
 			$this->setLogin($userInfos['login']);
 		}
-		
+		//language
+		if (isset($userInfos['language']) && $userInfos['language']) {
+			$this->setLanguage($userInfos['language']);
+		}
 		//lastname
 		if (isset($userInfos['lastname'])) {
 			$this->setLastName($userInfos['lastname']);
@@ -168,7 +180,7 @@ class CMS_ldap_user extends CMS_profile_user
 		//contact datas
 		$userCD = $this->getContactData();
 		foreach ($userInfos as $property => $value) {
-			if (!in_array($property, array('lastname', 'firstname', 'dn', 'login'))) {
+			if (!in_array($property, array('lastname', 'firstname', 'dn', 'login', 'language'))) {
 				$userCD->setValue($property, $value);
 			}
 		}
