@@ -127,7 +127,49 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
 					}
 				break;
 				case 'session':
-					//Not handled
+					//If we use LDAP SSO, check if returned SSO login is the same as the connected user in session
+					$ssoLogin = '';
+					if (defined('MOD_CMS_LDAP_SSO_LOGIN') && MOD_CMS_LDAP_SSO_LOGIN) {
+						$ssoLogin = MOD_CMS_LDAP_SSO_LOGIN;
+					} elseif (defined('MOD_CMS_LDAP_SSO_FUNCTION') && MOD_CMS_LDAP_SSO_FUNCTION) {
+						if (is_callable(MOD_CMS_LDAP_SSO_FUNCTION, false)) {//check if function/method name exists.
+							if (io::strpos(MOD_CMS_LDAP_SSO_FUNCTION, '::') !== false) {//static method call
+								$method = explode('::', MOD_CMS_LDAP_SSO_FUNCTION);
+								$ssoLogin = call_user_func(array($method[0], $method[1]));
+							} else { //function call
+								$ssoLogin = call_user_func(MOD_CMS_LDAP_SSO_FUNCTION);
+							}
+						} else {
+							$this->raiseError('Cannot call SSO method/function: '.MOD_CMS_LDAP_SSO_FUNCTION);
+						}
+					}
+					if ($ssoLogin) {
+						//Check user in session user
+						$authStorage = new Zend_Auth_Storage_Session('atm-auth');
+						$userId = $authStorage->read();
+						if (io::isPositiveInteger($userId)) {
+							//check if connected user use UCA, if so, disconnect it
+							$user = CMS_ldap_userCatalog::getByID($userId);
+							if ($user->getDN() && $user->getLogin() != $ssoLogin) {
+								//clear session content
+								CMS_session::deleteSession(true);
+							}
+						}
+					}
+					//Disconnect session
+					if (isset($this->_params['disconnect']) && $this->_params['disconnect']) {
+						//Check user in session user
+						$authStorage = new Zend_Auth_Storage_Session('atm-auth');
+						$userId = $authStorage->read();
+						if (io::isPositiveInteger($userId)) {
+							//check if connected user use UCA, if so, disconnect it
+							$user = CMS_ldap_userCatalog::getByID($userId);
+							if ($user->getDN()) {
+								//clear session content
+								CMS_session::deleteSession(true);
+							}
+						}
+					}
 				break;
 				case 'cookie':
 					//Not handled
@@ -155,25 +197,27 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
 							}
 						}
 						if ($ssoLogin) {
-							try {
-								//get user infos according to options
-								$ldap = new Zend_Ldap($this->_ldapOptions);
-								$acctname = $ldap->getCanonicalAccountName($ssoLogin, Zend_Ldap::ACCTNAME_FORM_DN);
-								if ($acctname) {
-									$hm = $ldap->getEntry($acctname);
-									if ($hm) {
-										$this->_userDN = $acctname;
-										$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_VALID;
-										$this->_result = new Zend_Auth_Result(Zend_Auth_Result::SUCCESS, $ssoLogin, $this->_messages);
-										return $this->_result;
+							if ($this->_params['authenticate'] == true) { //Connect SSO User
+								try {
+									//get user infos according to options
+									$ldap = new Zend_Ldap($this->_ldapOptions);
+									$acctname = $ldap->getCanonicalAccountName($ssoLogin, Zend_Ldap::ACCTNAME_FORM_DN);
+									if ($acctname) {
+										$hm = $ldap->getEntry($acctname);
+										if ($hm) {
+											$this->_userDN = $acctname;
+											$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_VALID;
+											$this->_result = new Zend_Auth_Result(Zend_Auth_Result::SUCCESS, $ssoLogin, $this->_messages);
+											return $this->_result;
+										}
 									}
+									if (!isset($this->_userDN)) {
+										$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_INVALID_USER;
+										$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
+									}
+								} catch (Exception $e) {
+									$this->raiseError($e->getMessage());
 								}
-								if (!isset($this->_userDN)) {
-									$this->_messages[] = CMS_auth::AUTH_SSOLOGIN_INVALID_USER;
-									$this->_result = new Zend_Auth_Result(Zend_Auth_Result::FAILURE, null, $this->_messages);
-								}
-							} catch (Exception $e) {
-								$this->raiseError($e->getMessage());
 							}
 						}
 					}
