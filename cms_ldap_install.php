@@ -16,11 +16,44 @@ if (!$installed) {
 	echo "Module LDAP installation : Not installed : Launch installation ...<br />";
 	if (CMS_patch::executeSqlScript(PATH_MAIN_FS.'/sql/mod_cms_ldap.sql',true)) {
 		CMS_patch::executeSqlScript(PATH_MAIN_FS.'/sql/mod_cms_ldap.sql',false);
-		echo "Module LDAP installation : Installation done.<br /><br />";
+		//copy module parameters file
+		if (CMS_file::copyTo(PATH_TMP_FS.PATH_PACKAGES_WR.'/modules/cms_ldap_rc.xml',PATH_PACKAGES_FS.'/modules/cms_ldap_rc.xml')) {
+			CMS_file::chmodFile(FILES_CHMOD, PATH_PACKAGES_FS.'/modules/cms_ldap_rc.xml');
+			echo "Module LDAP installation : Installation done.<br /><br />";
+		} else {
+			echo "ASE installation : INSTALLATION ERROR ! Can not copy parameters file ...<br />";
+		}
 	} else {
 		echo "Module LDAP installation : INSTALLATION ERROR ! Problem in SQL syntax (SQL tables file) ...<br />";
 	}
 } else {
-	echo "Module LDAP installation : Already installed : update done.<br />";
+	//load destination module parameters
+	$module = CMS_modulesCatalog::getByCodename('cms_ldap');
+	$moduleParameters = $module->getParameters(false,true);
+	if (!is_array($moduleParameters)) {
+		$moduleParameters = array();
+	}
+	//load the XML data of the source the files
+	$sourceXML = new CMS_file(PATH_TMP_FS.PATH_PACKAGES_WR.'/modules/cms_ldap_rc.xml');
+	$domdocument = new CMS_DOMDocument();
+	try {
+		$domdocument->loadXML($sourceXML->readContent("string"));
+	} catch (DOMException $e) {}
+	$paramsTags = $domdocument->getElementsByTagName('param');
+	$sourceParameters = array();
+	foreach ($paramsTags as $aTag) {
+		$name = ($aTag->hasAttribute('name')) ? $aTag->getAttribute('name') : '';
+		$type = ($aTag->hasAttribute('type')) ? $aTag->getAttribute('type') : '';
+		$sourceParameters[$name] = array(CMS_DOMDocument::DOMElementToString($aTag, true),$type);
+	}
+	//merge the two tables of parameters
+	$resultParameters = array_merge($sourceParameters,$moduleParameters);
+	//set new parameters to the module
+	if ($module->setAndWriteParameters($resultParameters)) {
+		echo 'Modules parameters successfully merged<br />';
+		echo "Module LDAP installation : Already installed : update done.<br />";
+	} else {
+		echo "UPDATE ERROR ! Problem for merging modules parameters ...<br /><br />";
+	}
 }
 ?>

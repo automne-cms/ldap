@@ -21,3 +21,9 @@ INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) V
 INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(12, 'cms_ldap', 'en', 'LDAP Link');
 INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(13, 'cms_ldap', 'en', 'The DN is invalid, does not exist or has an error...');
 INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(14, 'cms_ldap', 'en', 'Base DN');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(15, 'cms_ldap', 'en', 'Default group');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(16, 'cms_ldap', 'en', 'User group Id associated with the default users created from LDAP. Leave blank if there is none.');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(17, 'cms_ldap', 'en', 'Daily verification of LDAP users');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(18, 'cms_ldap', 'en', 'Check daily that the LDAP Automne user database are still valid. If they are no longer valid, they will be disabled. If this option is not enabled, users will remain in the Automne database until manual removal.');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(19, 'cms_ldap', 'en', 'Delete invalid users');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(20, 'cms_ldap', 'en', 'If this option is enabled, invalid users of the Automne database will be deleted instead of being disabled.');

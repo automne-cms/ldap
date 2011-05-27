@@ -36,4 +36,4 @@ CREATE TABLE `profilesLdapUsers` (
 # Contenu de la table `modules`
 #
 
-INSERT INTO `modules` (`id_mod`, `label_mod`, `codename_mod`, `administrationFrontend_mod`, `hasParameters_mod`, `isPolymod_mod`) VALUES ('', 1, 'cms_ldap', '', 0, 0);
+INSERT INTO `modules` (`id_mod`, `label_mod`, `codename_mod`, `administrationFrontend_mod`, `hasParameters_mod`, `isPolymod_mod`) VALUES ('', 1, 'cms_ldap', '', 1, 0);

@@ -90,20 +90,25 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
 										break;
 										case Zend_Auth_Result::FAILURE_IDENTITY_NOT_FOUND:
 									    	//Delete user if this user exist in DB and has an UID
-											if (isset($this->_options['deleteInvalidUser']) && $this->_options['deleteInvalidUser']) {
-												$ldap = $adapter->getLdap();
-												$ldapOptions = $ldap->getOptions();
-												$acctname = $ldap->getCanonicalAccountName($this->_params['login'], $ldapOptions['accountCanonicalForm']);
-												$invalidUser = CMS_ldap_userCatalog::getByLogin($acctname);
-												if ($invalidUser && $invalidUser->getDN()) {
+											$ldap = $adapter->getLdap();
+											$ldapOptions = $ldap->getOptions();
+											$acctname = $ldap->getCanonicalAccountName($this->_params['login'], $ldapOptions['accountCanonicalForm']);
+											$invalidUser = CMS_ldap_userCatalog::getByLogin($acctname);
+											if ($invalidUser && $invalidUser->getDN()) {
+												$module = CMS_modulesCatalog::getByCodename('cms_ldap');
+												$parameter = $module->getParameters('DELETE_INVALID_LDAP_USERS');
+												if (sensitiveIO::isPositiveInteger($parameter)) {
 													$invalidUser->setDeleted(true);
 													$invalidUser->setActive(false);
 													$log = new CMS_log();
 													$log->logMiscAction(CMS_log::LOG_ACTION_PROFILE_USER_EDIT, $invalidUser, "Auto delete invalid LDAP user : ".$invalidUser->getFullName());
-													$invalidUser->writeToPersistence();
-													unset($invalidUser);
-													CMS_grandFather::log('delete user '.$acctname);
+												} else {
+													$invalidUser->setActive(false);
+													$log = new CMS_log();
+													$log->logMiscAction(CMS_log::LOG_ACTION_PROFILE_USER_EDIT, $invalidUser, "Auto desactivate invalid LDAP user : ".$invalidUser->getFullName());
 												}
+												$invalidUser->writeToPersistence();
+												unset($invalidUser);
 											}
 										break;
 										case Zend_Auth_Result::FAILURE_CREDENTIAL_INVALID:
@@ -300,10 +305,11 @@ class CMS_ldap_auth extends CMS_grandFather implements Zend_Auth_Adapter_Interfa
       * @return string
       * @access private
       */
-	private function _getDefaultGroup()
-	{
-		if (sensitiveIO::isPositiveInteger(APPLICATION_CMS_LDAP_DEFAULT_GROUP)) {
-			return CMS_profile_usersGroupsCatalog::getByID(APPLICATION_CMS_LDAP_DEFAULT_GROUP);
+	private function _getDefaultGroup() {
+		$module = CMS_modulesCatalog::getByCodename('cms_ldap');
+		$parameter = $module->getParameters('DEFAULT_CREATED_USERS_GROUP');
+		if (sensitiveIO::isPositiveInteger($parameter)) {
+			return CMS_profile_usersGroupsCatalog::getByID($parameter);
 		} else {
 			return false;
 		}

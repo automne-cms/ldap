@@ -82,6 +82,55 @@ class CMS_ldap_userCatalog extends CMS_grandFather
 	}
 	
 	/**
+	  * Returns all the ldap profile users, sorted by last name + first name.
+	  * Static function.
+	  *
+	  * @param boolean activeOnly : return only active users (default : false)
+	  * @param boolean withDeleted : return deleted users also (default false)
+	  * @param boolean returnObjects : return CMS_profile_user objects (default) or array of userId
+	  * @return array(CMS_profile_user)
+	  * @access public
+	  */
+	static function getAll($activeOnly = true, $withDeleted = false, $returnObjects = true) {
+        $attrWhere = '';
+		$from = '';
+		$sql = "
+			select
+				id_pru, dn_plu
+			from
+				profilesUsers,
+				profilesLdapUsers
+				".$from."
+			where
+				".(!$withDeleted ? " deleted_pru='0'" : '')."
+				".(!$withDeleted && $activeOnly ? " and " : '')."
+				".($activeOnly ? " active_pru='1' " : '')."
+				".(!$withDeleted || $activeOnly ? " and " : '')."
+				profile_plu = id_pru
+			order by
+				lastName_pru,
+				firstName_pru
+		";
+		$q = new CMS_query($sql);
+		$users = array();
+		while ($r = $q->getArray()) {
+			$id = $r['id_pru'];
+			$dn = $r['dn_plu'];
+			if ($returnObjects) {
+				$usr = CMS_ldap_userCatalog::getByID($id);
+				if (is_object($usr)) {
+					if (($activeOnly && $usr->isActive()) || !$activeOnly) {
+						$users[] = $usr;
+					}
+				}
+			} else {
+				$users[$id] = $dn;
+			}
+		}
+		return $users;
+	}
+	
+	/**
 	  * Returns a CMS_ldap_user when given a LDAP dn
 	  * 
 	  * @param string $dn The LDAP dn to search a user with

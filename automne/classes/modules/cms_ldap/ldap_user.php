@@ -167,7 +167,14 @@ class CMS_ldap_user extends CMS_profile_user
 		}
 		//language
 		if (isset($userInfos['language']) && $userInfos['language']) {
-			$this->setLanguage($userInfos['language']);
+			$languages = CMS_languagesCatalog::getAllLanguages();
+			if (isset($languages[strtolower($userInfos['language'])])) {
+				$this->setLanguage(strtolower($userInfos['language']));
+			} else if (!$this->getLanguage()) {
+				$this->setLanguage(CMS_languagesCatalog::getDefaultLanguage()->getCode());
+			}
+		} else if (!$this->getLanguage()) {
+			$this->setLanguage(CMS_languagesCatalog::getDefaultLanguage()->getCode());
 		}
 		//lastname
 		if (isset($userInfos['lastname'])) {

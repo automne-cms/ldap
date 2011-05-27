@@ -53,6 +53,13 @@ class CMS_module_cms_ldap extends CMS_module
 	const MESSAGE_PAGE_GROUP_LINK = 12;
 	const MESSAGE_PAGE_BASE_DN = 14;
 	
+	const MESSAGE_PARAM_DEFAULT_CREATED_USERS_GROUP = 15;
+	const MESSAGE_PARAM_DEFAULT_CREATED_USERS_GROUP_DESC = 16;
+	const MESSAGE_PARAM_CHECK_LDAP_USERS_DAILY = 17;
+	const MESSAGE_PARAM_CHECK_LDAP_USERS_DAILY_DESC = 18;
+	const MESSAGE_PARAM_DELETE_INVALID_LDAP_USERS = 19;
+	const MESSAGE_PARAM_DELETE_INVALID_LDAP_USERS_DESC = 20;
+	
 	/**
 	  * Module autoload handler
 	  *
@@ -79,6 +86,63 @@ class CMS_module_cms_ldap extends CMS_module
 			$file = $classes[io::strtolower($classname)];
 		}
 		return $file;
+	}
+	
+	/**
+	  * Process the module daily routine
+	  *
+	  * @return void
+	  * @access public
+	  */
+	function processDailyRoutine() {
+		$module = CMS_modulesCatalog::getByCodename('cms_ldap');
+		$parameter = $module->getParameters('CHECK_LDAP_USERS_DAILY');
+		if (sensitiveIO::isPositiveInteger($parameter)) {
+			//get all LDAP users ID and DN
+			$users = CMS_ldap_userCatalog::getAll(true, false, false);
+			if (!$users) {
+				return true;
+			}
+			//Load LDAP options
+			$options = CMS_module_cms_ldap::getLdapConfig();
+			if (!$options) {
+				$this->raiseError("Daily routine error : cannot get LDAP options");
+				return false;
+			}
+			$ldapOptions = $options->ldap->toArray();
+			//load delete param
+			$deleteParameter = $module->getParameters('DELETE_INVALID_LDAP_USERS');
+			try {
+				//get user infos according to options
+				$ldap = new Zend_Ldap($ldapOptions);
+				if ($ldap) {
+					foreach ($users as $userId => $dn) {
+						//check if DN exists
+						if (!$ldap->exists($dn)) {
+							//load invalid user
+							$invalidUser = CMS_ldap_userCatalog::getByID($userId);
+							if ($invalidUser) {
+								if (sensitiveIO::isPositiveInteger($deleteParameter)) {
+									$invalidUser->setDeleted(true);
+									$invalidUser->setActive(false);
+									$log = new CMS_log();
+									$log->logMiscAction(CMS_log::LOG_ACTION_PROFILE_USER_EDIT, $invalidUser, "Daily routine : Auto delete invalid LDAP user : ".$invalidUser->getFullName());
+								} else {
+									$invalidUser->setActive(false);
+									$log = new CMS_log();
+									$log->logMiscAction(CMS_log::LOG_ACTION_PROFILE_USER_EDIT, $invalidUser, "Daily routine : Auto desactivate invalid LDAP user : ".$invalidUser->getFullName());
+								}
+								$invalidUser->writeToPersistence();
+								unset($invalidUser);
+							}
+						}
+					}
+				}
+			} catch (Exception $e) {
+				$this->raiseError("Daily routine error : ".$e->getMessage());
+			}
+			return true;
+		}
 	}
 	
 	/**

@@ -19,5 +19,11 @@ INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) V
 INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(10, 'cms_ldap', 'fr', 'Groupe LDAP');
 INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(11, 'cms_ldap', 'fr', 'Identification LDAP');
 INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(12, 'cms_ldap', 'fr', 'Liaison LDAP');
-INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(13, 'cms_ldap', 'fr', 'Le DN est invalide, n\'existe pas ou pr�sente une erreur ...');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(13, 'cms_ldap', 'fr', 'Le DN est invalide, n\'existe pas ou présente une erreur ...');
 INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(14, 'cms_ldap', 'fr', 'Base DN');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(15, 'cms_ldap', 'fr', 'Groupe par défaut');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(16, 'cms_ldap', 'fr', 'Identifiant du groupe utilisateur associé par défaut aux utilisateurs créés depuis le LDAP. Laisser vide si il n\'y en a pas.');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(17, 'cms_ldap', 'fr', 'Vérification quotidienne des utilisateurs LDAP');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(18, 'cms_ldap', 'fr', 'Vérifier quotidiennement que les utilisateurs LDAP de la base Automne sont toujours valides. Si ils ne sont plus valides, ils seront désactivés. Si cette option n\'est pas activée, les utilisateurs resterons dans la base Automne jusqu\'à suppression manuelle.');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(19, 'cms_ldap', 'fr', 'Supprimer les utilisateurs invalides');
+INSERT INTO `messages` (`id_mes`, `module_mes`, `language_mes`, `message_mes`) VALUES(20, 'cms_ldap', 'fr', 'Si cette option est active, les utilisateurs invalides de la base Automne seront supprimés au lieu d\'être désactivés.');

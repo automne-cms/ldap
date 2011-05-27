@@ -1,0 +1,5 @@
+<cms-module-parameters>
+	<param name="DEFAULT_CREATED_USERS_GROUP" type="integer"></param>
+	<param name="CHECK_LDAP_USERS_DAILY" type="boolean">0</param>
+	<param name="DELETE_INVALID_LDAP_USERS" type="boolean">0</param>
+</cms-module-parameters>
