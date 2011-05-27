@@ -1,5 +1,4 @@
 #Files to copy/update
->	/automne/config/ldap.ini
 >	/automne/classes/modules/cms_ldap/auth.php
 >	/automne/classes/modules/cms_ldap/ldap_group.php
 >	/automne/classes/modules/cms_ldap/ldap_group_catalog.php

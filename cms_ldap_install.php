@@ -16,12 +16,14 @@ if (!$installed) {
 	echo "Module LDAP installation : Not installed : Launch installation ...<br />";
 	if (CMS_patch::executeSqlScript(PATH_MAIN_FS.'/sql/mod_cms_ldap.sql',true)) {
 		CMS_patch::executeSqlScript(PATH_MAIN_FS.'/sql/mod_cms_ldap.sql',false);
-		//copy module parameters file
-		if (CMS_file::copyTo(PATH_TMP_FS.PATH_PACKAGES_WR.'/modules/cms_ldap_rc.xml',PATH_PACKAGES_FS.'/modules/cms_ldap_rc.xml')) {
+		//copy module parameters file and ldap config file
+		if (CMS_file::copyTo(PATH_TMP_FS.PATH_PACKAGES_WR.'/modules/cms_ldap_rc.xml', PATH_PACKAGES_FS.'/modules/cms_ldap_rc.xml')
+			&& CMS_file::copyTo(PATH_TMP_FS.PATH_MAIN_WR.'/config/ldap.ini', PATH_MAIN_FS.'/config/ldap.ini')) {
 			CMS_file::chmodFile(FILES_CHMOD, PATH_PACKAGES_FS.'/modules/cms_ldap_rc.xml');
+			CMS_file::chmodFile(FILES_CHMOD, PATH_MAIN_FS.'/config/ldap.ini');
 			echo "Module LDAP installation : Installation done.<br /><br />";
 		} else {
-			echo "ASE installation : INSTALLATION ERROR ! Can not copy parameters file ...<br />";
+			echo "Module LDAP installation : INSTALLATION ERROR ! Can not copy parameters file or LDAP config file ...<br />";
 		}
 	} else {
 		echo "Module LDAP installation : INSTALLATION ERROR ! Problem in SQL syntax (SQL tables file) ...<br />";
