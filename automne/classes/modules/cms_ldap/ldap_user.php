@@ -230,11 +230,17 @@ class CMS_ldap_user extends CMS_profile_user
 				$defaultFilter = sprintf ($accountFilterFormat , $acctname);
 				//Create group filter fomat
 				$canonicalForm = isset($atmOptions['ldapGroupCanonicalForm']) ? $atmOptions['ldapGroupCanonicalForm'] : Zend_Ldap::ACCTNAME_FORM_DN;
-				$accdn = $this->_dn;
+				// Change parameter passed to search depending of the format
+				if ($canonicalForm == Zend_Ldap::ACCTNAME_FORM_DN) {
+					$accdn = $this->_dn;
+				} elseif ($canonicalForm == Zend_Ldap::ACCTNAME_FORM_USERNAME) {
+					$accdn = $acctname;
+				}
+				// @TODO : treat other cases : Zend_Ldap::ACCTNAME_FORM_BACKSLASH and Zend_Ldap::ACCTNAME_FORM_PRINCIPAL
 				if (isset($atmOptions['ldapGroupFilterFormat'])) {
-					$groupFilter = sprintf($atmOptions['ldapGroupFilterFormat'], $acctname);
+					$groupFilter = sprintf($atmOptions['ldapGroupFilterFormat'], $accdn);
 				} else {
-					$groupFilter = sprintf('(member=%s)', $acctname);
+					$groupFilter = sprintf('(member=%s)', $accdn);
 				}
 				foreach ($groupsDNs as $groupId => $groupInfos) {
 					$result = true;

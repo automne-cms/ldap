@@ -1,5 +1,8 @@
+v0.12
+[REFACTOR] : Add a change to handle LDAP group association using DN format
+
 v0.11
-[FEATURE ] : Add daily routine task and use module parameters instead of some PHP constants
+[FEATURE] : Add daily routine task and use module parameters instead of some PHP constants
 
 v0.1
 First module release
